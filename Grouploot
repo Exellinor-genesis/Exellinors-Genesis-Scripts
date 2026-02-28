@@ -1,0 +1,45 @@
+Contains: 1 alias
+
+Description: Loot items from multiple corpses at once!
+
+Usage: grouploot <item> <number of corpses> e.g. <grouploot nicked orcish dagger 3>
+
+
+Alias : grouploot
+
+Execute the following javascript:
+
+function ordinal(n) {
+  if (n % 100 >= 11 && n % 100 <= 13) return n + "th";
+
+  switch (n % 10) {
+    case 1: return n + "st";
+    case 2: return n + "nd";
+    case 3: return n + "rd";
+    default: return n + "th";
+  }
+}
+
+if (args["*"]) {
+
+  var parts = args["*"].split(" ");
+  var count = parseInt(parts[parts.length - 1]);
+
+  if (isNaN(count) || count < 1) {
+    gwc.output.append("Usage: <grouploot item number>", "#21cfa6");
+    return;
+  }
+
+  var item = parts.slice(0, parts.length - 1).join(" ");
+
+  for (var i = 1; i <= count; i++) {
+    var corpse = ordinal(i) + " corpse";
+    gwc.connection.send("get " + item + " from " + corpse);
+  }
+gwc.output.append("Looting " + item + " from " + count + " corpses.", "#fcba03");
+}
+else {
+  gwc.output.append("Usage: <grouploot (item) (number of corpses)>", "#21cfa6");
+  gwc.output.append("e.g. <grouploot curved orc scimitar 5>", "#21cfa6");
+
+}
