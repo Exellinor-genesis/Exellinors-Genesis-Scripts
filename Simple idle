@@ -1,0 +1,64 @@
+Contains: 1 alias
+
+Description: A quite simple alias that sends a command of your choice every few minutes
+
+Usage: <idle on|off>
+
+--------------------------------------------------------------
+Alias: idle
+
+Execute the following javascript
+
+//The command to be sent
+var idlecommand = "v age"
+//Delay between sending commands
+//First number is minutes between commands
+var idleinterval = 5 * 60 * 1000
+
+
+// Initialize storage
+if (!gwc.userdata.antiidle) {
+  gwc.userdata.antiidle = {
+    enabled: false,
+    interval: null
+  };
+}
+
+// Toggle ON
+if (args[1] === "on") {
+
+  if (gwc.userdata.antiidle.enabled) {
+    gwc.output.append("Anti-idle already running.", "#21cfa6");
+    return;
+  }
+
+  gwc.userdata.antiidle.interval = setInterval(function () {
+    gwc.connection.send(idlecommand);
+  }, idleinterval); 
+
+  gwc.userdata.antiidle.enabled = true;
+  gwc.output.append("Anti-idle enabled " + "(" + (idleinterval/60000) + " minute interval)", "red");
+}
+
+// Toggle OFF
+else if (args[1] === "off") {
+
+  if (!gwc.userdata.antiidle.enabled) {
+    gwc.output.append("Anti-idle is not running.", "#21cfa6");
+    return;
+  }
+
+  clearInterval(gwc.userdata.antiidle.interval);
+
+  gwc.userdata.antiidle.enabled = false;
+  gwc.userdata.antiidle.interval = null;
+
+  gwc.output.append("Anti-idle disabled.", "red");
+}
+
+// Status
+else {
+
+  var status = gwc.userdata.antiidle.enabled ? "ON" : "OFF";
+  gwc.output.append("Anti-idle is currently: " + status, "#21cfa6");
+}
