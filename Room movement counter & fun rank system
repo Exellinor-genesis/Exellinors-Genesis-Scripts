@@ -105,9 +105,8 @@ else {
     out("Daily: "+ walkData.daily.count)
     out("-------------------------------",accentColor)
     out("Most Rooms in a Day: " + walkData.records.mostInDay)
-
     if (walkData.records.mostInDayDate) {
-        out("Record Date: " + walkData.records.mostInDayDate + " (" + walkData.records.mostInDay + ")")
+        out("Record Date: " + walkData.records.mostInDayDate)
     }
     out("-------------------------------",accentColor)
 
