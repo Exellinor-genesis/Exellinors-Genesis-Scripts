@@ -97,16 +97,13 @@ if (args[1] === "reset") {
 
     out("Walk data reset.", accentColor)
 }
-else if (args[1] === "daily"){
-     out("=== Movement Stats ===", accentColor)
-  out("Today: " + walkData.daily.count)
-}
-
 else {
 	out("-----Your Movemement Stats-----",accentColor)
 	out("Current Rank: " + (currentRank ? currentRank.name : "none") + "(" + walkData.lifetime + ")")
 	out("Next Rank: " + (nextRank ? nextRank.name : "none") + "(" + nextRank.req + ")" )
     out("Lifetime: " + walkData.lifetime)
+    out("Daily: "+ walkData.daily.count)
+    out("-------------------------------",accentColor)
     out("Most Rooms in a Day: " + walkData.records.mostInDay)
 
     if (walkData.records.mostInDayDate) {
@@ -115,10 +112,8 @@ else {
     out("-------------------------------",accentColor)
 
 }
-
 localStorage.setItem("walkData", JSON.stringify(walkData))
 save()
-
 -------------------------------------------------------------------------------------------
 
 Trigger: walks 
