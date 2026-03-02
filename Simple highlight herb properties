@@ -8,7 +8,7 @@ Trigger: Highlight herb properties
 
 Type: regexp
 
-Pattern: | mana     | maj  | fatigue  | min | health  | norm | con      | dex      | fire     | dis      | int      | magic    | wis      | str      | neg  |
+Pattern: ( mana     | maj  | fatigue  | min | health  | norm | con      | dex      | fire     | dis      | int      | magic    | wis      | str      | neg  )
 
 Execute Javascript:
 
