@@ -2,7 +2,7 @@ Contains: 1 alias and 1 trigger
 
 Description: An alias which, when used, boards the next ship automatically
 
-IMPORTANT: Before using, change the alias' "purse" to whatever money container you use
+IMPORTANT: Before using, change the alias's "purse" to whatever money container you use
 
 Usage: boardnext
 
@@ -11,24 +11,26 @@ Alias: boardnext
 
 Execute the following Javascript:
 
-//Change this if your money container is not a purse
+//Change this to your money container
 gwc.userdata.wallet = "purse"
-
+//Change this if the name of your trigger is something different
+var btrigger = "board ship auto"
 
 if (gwc.userdata.boardingnext === "false"){
-gwc.trigger.enable("board ship auto");
+gwc.trigger.enable(btrigger);
 gwc.output.append("Boarding next ship!","#15a395");
 gwc.userdata.boardingnext = "true"
 }
 
 else if(gwc.userdata.boardingnext === "true"){
-gwc.trigger.disable("board ship auto");
+gwc.trigger.disable(btrigger);
 gwc.output.append("Ship boarding cancelled","#15a395");
 gwc.userdata.boardingnext = "false"
 }
 
 else if (!gwc.userdata.boardingnext){
- gwc.userdata.boardingnext = "true"
+ gwc.userdata.boardingnext = "true";
+ gwc.trigger.enable(btrigger);
  gwc.output.append("Boarding next ship!","#15a395");
 }
 
