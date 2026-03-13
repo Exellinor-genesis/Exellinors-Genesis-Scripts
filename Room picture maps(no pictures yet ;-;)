@@ -1,0 +1,244 @@
+Description: 
+  A script that makes a draggable, resizable window which displays a picture based on the room you're in. 
+  It's meant to be used to make cooler looking maps, but I haven't made any maps yet, so it's just a concept for now!
+  This is my first time messing around with making popup windows and the like so please message me if it's broken or something!
+  Add room ID's and links to pictures in the code of the trigger for it to actually work!
+  Note: closing the window won't disable the script, it'll pop back up when you leave the room. Use <picmaps off> to disable it.
+Usage: picmaps on | off
+
+--------------------------------------------------------------------------
+
+Optional alias : Makes it way easier to assign images to rooms
+
+Usage:
+  Roomhere ID(appends room ID plus an empty spot to put the link)
+  Roomhere [link](gives you the current room ID plus whatever link you pasted, ready to drop into the trigger's code)
+
+Alias: roomhere
+
+Execute Javascript:
+
+var roomid = gwc.gmcp.data.room.id
+var textcolor = "#ffbe0d"
+let input = args["*"];
+
+function out(text, color) {
+      gwc.output.append(text, color || textcolor)
+  }
+
+if (input && input.startsWith("http")){
+  out('"' + roomid + '"' + " : " + '"' + input + '"')
+}
+
+else if (/^id$/i.test(input)) {
+  out('"' + roomid + '"' + ":" + '"' + "link" + '"')
+}
+
+//Detect links
+
+else{
+  out("Usage: <roomhere imglink> or <roomhere ID>")
+   }
+
+--------------------------------------------------------------------------
+
+Alias: picmaps
+
+Execute Javascript:
+//stuff to mess with
+var triggername = "Picture maps"
+var textcolor = "#5f90de"
+
+//nerd stuff
+function out(text, color) {
+      gwc.output.append(text, color || textcolor)
+  }
+var picmapstatus = gwc.userdata.picmapstatus
+if(!picmapstatus){picmapstatus="off"}
+
+//turn on
+if (args[1] == "on"){
+out("Picture maps turned on!")
+out("Walk a room to activate it")
+picmapstatus = "on"
+gwc.trigger.enable(triggername)
+}
+
+//turn off
+if (args[1] == "off"){
+out("Picture maps turned off!")
+picmapstatus = "off"
+gwc.trigger.disable(triggername)
+//close window
+var win = document.getElementById("gwcMapWindow");
+if (win) win.remove();
+}
+
+//usage
+else if(!args["*"]){
+  out("Usage: picmaps on | off");
+  out("Picture maps are currently " + picmapstatus)
+}
+
+-------------------------------------------------------------
+
+Trigger: Picture maps 
+
+Type: gmcp
+
+(If trigger doesn't fire, disable case sensitive)
+
+Pattern: room.info
+
+Execute Javascript:
+
+// "Room id" : "direct image link"
+// Link must be a direct forward to an image. It should end in .jpg or .png, etc.
+var roomImages = {
+    /*in front of sparkle church(doesn't show the right area, just a random example map)*/ "U5vzK.": "https://i0.wp.com/2minutetabletop.com/wp-content/uploads/2020/02/Arvyre-Continent-Map-23x16-Base-Map.jpg",
+};
+
+
+// Creat window
+if (!document.getElementById("gwcMapWindow")) {
+
+    var win = document.createElement("div");
+    win.id = "gwcMapWindow";
+
+    win.style.position = "fixed";
+    win.style.top = "80px";
+    win.style.right = "40px";
+    win.style.width = "320px";
+    win.style.height = "240px";
+    win.style.background = "#111";
+    win.style.border = "1px solid #444";
+    win.style.borderRadius = "12px";
+    win.style.boxShadow = "0 4px 15px rgba(0,0,0,0.6)";
+    win.style.zIndex = "9999";
+    win.style.display = "flex";
+    win.style.flexDirection = "column";
+    win.style.resize = "both";
+    win.style.overflow = "hidden";
+
+
+    // Window header
+    var header = document.createElement("div");
+    header.style.background = "#1b1b1b";
+    header.style.padding = "6px 10px";
+    header.style.cursor = "move";
+    header.style.userSelect = "none";
+    header.style.borderTopLeftRadius = "12px";
+    header.style.borderTopRightRadius = "12px";
+    header.style.fontSize = "13px";
+    header.style.color = "#ccc";
+    header.style.fontFamily = "sans-serif";
+    header.style.display = "flex";
+    header.style.justifyContent = "space-between";
+    header.style.alignItems = "center";
+
+
+    // Title of window
+    var title = document.createElement("div");
+    title.innerText = "Room Map";
+
+
+    // Close window button
+    var closeBtn = document.createElement("div");
+    closeBtn.innerHTML = "✕";
+
+    closeBtn.style.cursor = "pointer";
+    closeBtn.style.padding = "2px 6px";
+    closeBtn.style.borderRadius = "6px";
+    closeBtn.style.color = "#aaa";
+
+    closeBtn.onmouseover = function() {
+        closeBtn.style.background = "#333";
+        closeBtn.style.color = "#fff";
+    };
+
+    closeBtn.onmouseout = function() {
+        closeBtn.style.background = "transparent";
+        closeBtn.style.color = "#aaa";
+    };
+
+    closeBtn.onclick = function() {
+        win.remove();
+    };
+
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+
+
+    // Content Area
+    var content = document.createElement("div");
+    content.id = "gwcMapContent";
+
+    content.style.flex = "1";
+    content.style.display = "flex";
+    content.style.alignItems = "center";
+    content.style.justifyContent = "center";
+    content.style.background = "#0b0b0b";
+    content.style.color = "#666";
+    content.style.fontFamily = "sans-serif";
+    content.style.fontSize = "14px";
+    content.innerText = "No map for this room";
+
+
+    win.appendChild(header);
+    win.appendChild(content);
+    document.body.appendChild(win);
+
+
+    // Window Dragging
+    var offsetX = 0;
+    var offsetY = 0;
+    var dragging = false;
+
+    header.onmousedown = function(e) {
+        dragging = true;
+        offsetX = e.clientX - win.offsetLeft;
+        offsetY = e.clientY - win.offsetTop;
+    };
+
+    document.onmousemove = function(e) {
+        if (!dragging) return;
+
+        win.style.left = (e.clientX - offsetX) + "px";
+        win.style.top = (e.clientY - offsetY) + "px";
+        win.style.right = "auto";
+    };
+
+    document.onmouseup = function() {
+        dragging = false;
+    };
+}
+
+
+
+// Update map when moving
+function updateRoomMap() {
+
+    if (!gwc.gmcp || !gwc.gmcp.data || !gwc.gmcp.data.room) return;
+
+    var roomid = gwc.gmcp.data.room.id;
+    var content = document.getElementById("gwcMapContent");
+
+    if (!content) return;
+
+    if (roomImages[roomid]) {
+
+        content.innerHTML =
+            '<img src="' + roomImages[roomid] + '" style="max-width:100%; max-height:100%; border-radius:6px;">';
+
+    } else {
+
+        content.innerHTML = "No map for this room";
+
+    }
+}
+
+
+// Delay slightly to allow room.info to be received
+setTimeout(updateRoomMap, 10);
