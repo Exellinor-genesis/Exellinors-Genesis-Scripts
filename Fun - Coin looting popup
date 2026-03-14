@@ -1,0 +1,91 @@
+Description: when you loot coins from a corpse, it makes a glowing pop up saying how many coins of what type you looted, colored to the type
+             Sometimes it just doesn't pop up and I'm working on figuring out why so sorry about that! Enjoy though!
+
+Usage: plug and play
+
+----------------------------------------------------
+Trigger: Coin popups
+
+Regexp trigger: ^(You get (.*) (copper|silver|gold|platinum|steel) (coin|coins) from (.*) corpse)
+
+Execute javascript:
+
+//amount from regex
+let amountText = args[2].trim()
+let metal = args[3]
+
+//Determine coin amount
+let amount
+
+if (amountText === "a" || amountText === "the") {
+  amount = "one"
+} else {
+  amount = args[2]
+}
+
+//Colour by coin type
+const coinColours = {
+  copper: "#b87333",
+  silver: "#c0c0c0",
+  gold: "#ffd700",
+  platinum: "#e5e4e2",
+  steel: "#9aa0a6"
+}
+
+const colour = coinColours[metal] || "#ffffff"
+
+//Create popup text
+let text = "+" + amount + " " + metal
+
+//Safe margins so popup never spawns off-screen
+const marginX = 150
+const marginY = 80
+
+let left = marginX + Math.random() * (window.innerWidth - marginX * 2)
+let top = marginY + Math.random() * (window.innerHeight - marginY * 2)
+
+//Create element
+let popup = $("<div class='coinPopup'>" + text + "</div>")
+
+//Style it
+popup.css({
+  position: "fixed",
+  left: left + "px",
+  top: top + "px",
+  color: colour,
+  fontWeight: "bold",
+  fontSize: "20px",
+  pointerEvents: "none",
+  textShadow: "0 0 6px " + colour + ", 0 0 10px " + colour,
+  transform: "scale(1)",
+  opacity: 1,
+  zIndex: 9999
+})
+
+//Add to da page
+$("body").append(popup)
+
+//Random drift
+let driftX = (Math.random() - 0.5) * 60
+let driftY = -40 - Math.random() * 40
+
+// Animate (float + fade)
+popup.animate(
+  {
+    top: "+=" + driftY,
+    left: "+=" + driftX,
+    opacity: 0
+  },
+  {
+    duration: 3000,
+    step: function(now, fx) {
+      if (fx.prop === "opacity") {
+        let scale = 0.6 + now * 0.4
+        popup.css("transform", "scale(" + scale + ")")
+      }
+    },
+    complete: function() {
+      popup.remove()
+    }
+  }
+)
