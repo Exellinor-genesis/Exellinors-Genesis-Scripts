@@ -1,0 +1,47 @@
+Description: 2 aliases (hget and hput) which let you easily open your herb jar, grab multiple herbs(separated by commas), and then close the jar
+
+Contains: 2 aliases
+
+Usage: hget|hput herb1, herb2, herb3
+
+---------------------------------------------------------
+
+Alias: hget
+
+Execute javascript:
+
+var container = "blue glass jar" //change to what your container is!
+
+gwc.connection.send('!open ' + container);
+
+var gottenherbs = args['*'].split(','); //split by comma
+
+for (var i = 0; i < gottenherbs.length; i++) {
+    var herb = gottenherbs[i].trim();
+    if (herb.length > 0) {
+        gwc.connection.send('!get ' + herb + ' from ' + container);
+    }
+}
+
+gwc.connection.send('!close ' + container);
+
+---------------------------------------------------------
+
+Alias: hput
+
+Execute javascript:
+
+var container = "blue glass jar" //change to what your container is!
+
+gwc.connection.send('!open ' + container);
+
+var gottenherbs = args['*'].split(','); //split by comma
+
+for (var i = 0; i < gottenherbs.length; i++) {
+    var herb = gottenherbs[i].trim();
+    if (herb.length > 0) {
+        gwc.connection.send('!put ' + herb + ' in ' + container);
+    }
+}
+
+gwc.connection.send('!close ' + container);
