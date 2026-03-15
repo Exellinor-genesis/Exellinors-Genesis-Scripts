@@ -6,7 +6,7 @@ Usage: plug and play
 ----------------------------------------------------
 Trigger: Coin popups
 
-Regexp trigger: ^(You get (.*) (copper|silver|gold|platinum|steel) (coin|coins) from (.*) corpse)
+Regexp trigger: (You get (.*) (copper|silver|gold|platinum|steel) (coin|coins) from (.*) corpse)
 
 Execute javascript:
 
