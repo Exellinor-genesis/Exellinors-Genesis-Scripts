@@ -1,6 +1,7 @@
 Description: Some useful bits of code that I use in many of my triggers/aliases which just make it easier to code and nicer to keep track of!
 
 Tips:
+> Using these is very simple! Just paste the code of whichever thing you want into your trigger/alias and then follow the usage instructions or try the examples!
 > For help finding nice colors, google "color picker"!
 > Some of these functions share the same name (like comms and replace). The last one defined will override the others, so be careful with ordering or rename them if needed!
 > Colors depend on your browser supporting HTML. If something doesn’t show color, that’s probably why :<
@@ -16,10 +17,6 @@ Tips:
  //Appends a line of colored(optional) text to your normal output window!
  //Usage: print(message, color)
  //Example: print("This is an example!","green")
- //More examples:
- print("Hello world!");
- print("Warning! Low health!","red");
- print("You gained 500 gold!","gold");
  //Explanation:
  //This prints text to your main output window. If you include a color, it colors the text. If not, it uses default color.
  function print(message , color){
@@ -132,3 +129,80 @@ send("say Hello there!");
  gwc.output.append(formatNumber(gwc.userdata.alltimeKills));
  //Explanation:
  //Formats numbers like 1000 → 1,000 to make them easier to read
+
+ --Uppercaseify text--<
+ //Code:
+  function caps(text) {
+      return String(text).toUpperCase();
+    }
+    function lcase(text) {
+      return String(text).toLowerCase();
+    }
+//Examples:
+gwc.output.append(caps(args[1]));
+//Explanation: 
+//Transforms whatever letters you plug into it into either uppercase or lowercase respectively
+
+--Glowing popup generator!--<
+//Creates a glowing popup of whatever text you plug in!
+//Usage: coolPopup(text, color, total popup time in milliseconds)
+//Example: coolPopup("+" + args[1] + " coins!" , "gold" , 3000)
+//Example 2: coolPopup("Hello world!" , "#23e84e" , 1500)
+//Code:
+
+function coolPopup(text,colour,time){
+  //safety margins
+  const marginX = 150;
+  const marginY = 80;
+  let left = marginX + Math.random() * (window.innerWidth - marginX * 2);
+  let top = marginY + Math.random() * (window.innerHeight - marginY * 2);
+  
+  //Create element
+  let popup = $("<div class='fancypopup'>" + text + "</div>");
+  
+  //Style
+  popup.css({
+    position: "fixed",
+    left: left + "px",
+    top: top + "px",
+    color: colour,
+    fontWeight: "bold",
+    fontSize: "20px",
+    pointerEvents: "none",
+    textShadow: "0 0 6px " + colour + ", 0 0 10px " + colour,
+    transform: "scale(1)",
+    opacity: 1,
+    zIndex: 9999,
+    background: "rgba(0, 0, 0, 0.3)",
+    padding: "3px 4px",
+    borderRadius: "1px",
+  });
+  
+  //Add to page
+  $("body").append(popup);
+  
+  //Random drift
+  let driftX = (Math.random() - 0.5) * 60;
+  let driftY = -40 - Math.random() * 40;
+  
+  //Animate float + fade
+  popup.animate(
+    {
+      top: "+=" + driftY,
+      left: "+=" + driftX,
+      opacity: 0
+    },
+    {
+      duration: time,
+      step: function(now, fx) {
+        if (fx.prop === "opacity") {
+          let scale = 0.6 + now * 0.4;
+          popup.css("transform", "scale(" + scale + ")");
+        }
+      },
+      complete: function() {
+        popup.remove();
+      }
+    }
+  )
+}
