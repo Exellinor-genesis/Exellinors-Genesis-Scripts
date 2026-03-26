@@ -394,10 +394,6 @@ else if(a(2, "off")){
   }
   
 }
-// If no storage
-else if(!trax){
-  out("No Trax data detected yet! <trax init> to initialize.", "red")
-}
 
 //=====================
 //OUTPUT INFORMATION
@@ -899,6 +895,10 @@ else if(a(1, "init")){
     out("Trax storage is already initialized. At least I think so, <trax check> to be sure!")
   }
         }
+// If no storage
+else if(!trax){
+  out("No Trax data detected yet! <trax init> to initialize.", "red")
+}
 else if(!args["*"]){
   out(
 `Enter <trax tab on> to enable companion tab.
