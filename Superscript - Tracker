@@ -2,7 +2,7 @@ Description: A very nice colored tracker system for everything from coins and im
 
 Contains: 3 triggers & 1 alias
 
-Usage: A veritable superscript(nearly a thousand lines of code) which tracks herbs picked, kills, imbues looted, coins looted, your progress to your next mortal level, your rooms moved, and even the money in your bank account! It 
+Usage: A veritable superscript(nearly a thousand lines of code) which tracks herbs picked, kills, imbues looted, coins looted, whether you can use abilities and herbs, progress to your next mortal level, your rooms moved, and even the money in your bank account!
        It takes a bit of a while to set up properly but once it's done, this is a very satisfying bit of code! 
        You can see everything you do update live, or if you're playing on mobile, type <trax> to see it in the conventional way.
        If you have coding experience, this should be fairly easy to set up with everything working, and if you don't have experience this is a good way to practice!! You don't actually have to code anything, just drop in my code to the right places.
@@ -60,18 +60,19 @@ Common time zones (replace the var = "America/Chicago" with one of these)
 
 
 
------------------------------------------------------------------------------
+####################################################################################################
 
 Main tracking trigger: Trax 1
 
 Regexp pattern:
 
-(^You (?:killed|defeated) the (?:.*))|^(You find (?:.*)[!])|(?:You (?:get|take) (.*) (copper|silver|gold|platinum) (?:coin|coins) from (?:.*) corpse)|(?:Total value: (?:(.*) platinum))|(?:You (?:take|get|pick) (?:.*) (unusual|peculiar|exotic) (?:.*) from (?:.*) corpse)|(?:^You are (just beginning on the path to|very far from|a long distance from|a fair distance from|just under halfway to|just over halfway to|getting closer to|fairly close to|very close to|on the verge of) (?:.*) (novice|greenhorne|beginner|apprentice|wanderer|adventurer|adept|great adventurer|veteran|expert|rising hero|hero|titan|champion|legend|myth)[.])|(^You finally recover)
-Execute Javascript:
-//Things for user to mess with
-var timezone = "America/Chicago" //timezone list is provided in the github!
+(^You (?:killed|defeated) the (?:.*))|^(You find (?:.*)[!])|(?:You (?:get|take) (.*) (copper|silver|gold|platinum) (?:coin|coins) from (?:.*) corpse)|(?:Total value: (?:(.*) platinum))|(?:You (?:take|get|pick) (?:.*) (unusual|peculiar|exotic) (?:.*) from (?:.*) corpse)|(?:^You are (just beginning on the path to|very far from|a long distance from|a fair distance from|just under halfway to|just over halfway to|getting closer to|fairly close to|very close to|on the verge of) (?:.*) (novice|greenhorne|beginner|apprentice|wanderer|adventurer|adept|great adventurer|veteran|expert|rising hero|hero|titan|champion|legend|myth)[.])|(You finally recover)|(^You eat (?:.*) (?:leaf|leaves|flowers|flower|rose|bud|mushroom|mushrooms|berry|berries|apple|fruit|fruits|moss|weed|weeds|riverweed|vine|lichen|alga|bean|root|carrot|bulb|potato|onion|bark|gras|grass|straw|trefoil|wreath|stalk|nut|fern|fungus|pumpkin|seeds|sap|stalk|frond)[.])|(^You feel ready to consume another herb)|(^You smash (?:.*) on your forehead|You feel the energy of the egg leaving you)(Ability used|Ability ready again)
 
-//declare args for easier reference
+Execute Javascript:
+
+//Things for user to mess with
+const timezone = "America/Chicago" // longer timezone list is provided in the github! Common ones: America/New_York | America/Chicago | America/Los_Angeles | Europe/London | Europe/Paris | Asia/Tokyo | Asia/Kolkata | Australia/Sydney
+//declare args for easier reference - each set of parentheses is a different args, unless it has a ?: at the beginning
 let kills = a(1)
 let herbfound = a(2)
 let coinamount = a(3)
@@ -81,24 +82,57 @@ let imbuetype = a(6)
 let rankl = a(7)
 let rankt = a(8)
 let recovered = args[9]
+let herbeaten = args[10]
+let herbready = args[11]
 let progress = gwc.gmcp.data.character.vitals.progress
+let strength = args[12]
+let ability = args[13]
 
 let trax = gwc.userdata.trax;
-//Ensure stored date
-if (!trax.currentdate || trax.currentdate === "unknown"||trax.currentdate == null) {
-  storeCurrentDate();
+
+//Example of ability ready script
+if(ability){
+  if(ability.includes("You cast example spell")){
+    trax.cancastexample = false
+  }
+  else if(strength.includes("You feel ready to cast example spell again")){
+    trax.cancastexample = true
+  out("Example spell is available again!")
+  }
 }
-//Reset daily
+//Then in the tab script put something like this:
+/*
+let examplestatus = ""
+if(trax.cancastexample === true){
+examplestatus = nl + color("You can cast example!", "lime")
+}
+if(trax.cancastexample === false){
+examplestatus = nl + color("You can't use example yet." , "crimson")
+}
+
+//In the output section(The one with all the lines like "progress + (newline) kills + (newline) etc."
+Things that come before +
+examplestatus + 
+things that come after
+*/
+//Ensure stored date
+if (!trax.currentdate || trax.currentdate === "unknown" || trax.currentdate == null) {
+  trax.currentdate = getDate();
+}
+//Reset when logging in
 if(recovered){
+  //Reset progress
 trax.progress.current = progress
 out("Trax initialized")
-  if(isNewDay()){
+  //Reset if new day
+  if(getDate()!= trax.currentdate){
 out("It's a new day so daily storages have been flipped!")
 trax.killz.today = 0
 trax.imbues.session = 0
 trax.herbs.today = 0
 trax.progress.today = 0
-storeCurrentDate()
+trax.progress.current = gwc.gmcp.data.character.vitals.progress;
+trax.currentdate = getDate();
   }
 }
 
@@ -112,6 +146,13 @@ trax.killz.today += 1
 if(herbfound){
 trax.herbs.alltime += 1
 trax.herbs.today += 1
+}
+//Herb cooldown
+if(herbeaten){
+trax.caneatherb = false
+}
+if(herbready){
+trax.caneatherb = true 
 }
 
 //Count imbues
@@ -139,8 +180,8 @@ if(progress != "insignificant" && progress != "no measurable" && progress != tra
   //up progs
   trax.progress.levels += 1
   trax.progress.today += 1
-
-   gwc.output.append("New progress level reached!","lime")
+  
+  gwc.output.append("New progress level reached!","lime")
   //Fanta reset
   if(progress == "fantastic"){
    gwc.output.append("And you've reached fantastic progress! Resetting", "lime")
@@ -183,6 +224,17 @@ trax.nextlevel.rank = rankt
   let ppercent = progressMap[rankl]
   trax.nextlevel.percent = ppercent
 }
+
+// Strength spell tracker
+if(strength){
+  if(strength.includes("smash")){
+    trax.canstrength = false
+  }
+  else if(strength.includes("leaving")){
+    trax.canstrength = true
+  out("Strength spell is available again!")
+  }
+}
 //==================
 // FUNCTIONS
 //==================
@@ -190,28 +242,16 @@ trax.nextlevel.rank = rankt
 //simple args
 function a(num){return args[num];}
 
-//Store date
-  function storeCurrentDate() {
+//Get date
+function getDate() {
     const today = new Date().toLocaleDateString("en-CA", { 
       timeZone: timezone, 
       year: "numeric", 
       month: "2-digit", 
       day: "2-digit" 
     });
-  gwc.userdata.trax.currentdate = today
+return today
   }
-//Check if new day
-function isNewDay() {
-  const today = new Date().toLocaleDateString("en-CA", { 
-    timeZone: timezone, 
-    year: "numeric", 
-    month: "2-digit", 
-    day: "2-digit" 
-  });
-
-return gwc.userdata.trax.currentdate !== today;
-  
-}
 
 //Easier coin adding
 function addCoin(type, amount) {
@@ -247,30 +287,24 @@ function addCoin(type, amount) {
     }
     return total;
   }
+//output function
   function out(text, color = "#b440db"){
     gwc.output.append(text,color)
   }
 
+####################################################################################################
 
-
-
-============================================================================
-
-Tracking trigger 2: room movement
+Trigger 2 : Trax 2
 
 gmcp pattern: room.info
 
 Execute Javascript:
 
-
-/* 
-//remove the asterisk things if you use the board next ship trigger!
 if(gwc.userdata.boardingnext == "true"){
  gwc.userdata.boardingnext = "false"
   gwc.trigger.disable("board ship auto")
 gwc.output.append("Ship boarding cancelled!" , "#9fc5e8");
 }
-*/
 let trax = gwc.userdata.trax;
 if(!trax.walks.alltime){
 trax.walks.alltime = 1}
@@ -279,244 +313,297 @@ if(trax.walks.alltime){
 trax.walks.alltime += 1
 }
 
-============================================================================
+#####################################################################################################
 
 Alias: Trax
 
 Execute Javascript:
 
-var triggername = "Trax tab" //name of the trigger for the trax tab
+// ============================================
+// CONFIGURATION
+// ============================================
+const tabtrigger = "Trax tab";      //Name of tab trigger
+const maintracker = "Trax 1";       //Name of the trigger with long regex pattern
+const roomtracker = "Trax 2";       //Name of the trigger with "room.info" pattern
 
-let trax = gwc.userdata.trax
+const timezone = "America/Chicago"; //Your timezone - list is in github
 
-let us = gwc.userdata
-//Colors of each thing
-const c = {
-  herbs : ["#067d00" , "#2ed947"],
-  sep : ["#1949f7" , "#0acfc5"],
-  combat : ["#910919" , "#d11f34"],
-  worldly : ["#e3a214" , "#FFD700"],
-  walk : ["#8f4b17" , "#b05d1e"],
-  imbues : ["#78199e", "#af40db"],
-  prog : ["#2fb56e", "#65eba3"],
-}
-//Valid commands
+// Colors!!! Change to your liking or swap out with a preset below
+const defaultcolor = "#b440db";     // Default output color
+const helpcolor = "cyan";           // Color of help menu
+const clickcolor = "#14a803"        // Color of clickable things
+
+//Default
+const colors = {
+  herbs: ["#067d00", "#2ed947"],    //Green colors
+  sep: ["#1949f7", "#0acfc5"],      //Bright & dark blue colors
+  combat: ["#910919", "#d11f34"],   //Red colors
+  worldly: ["#e3a214", "#FFD700"],  //Golden colors
+  walk: ["#8f4b17", "#b05d1e"],     //Brown colors
+  imbues: ["#78199e", "#af40db"],   //Purple colors
+  prog: ["#2fb56e", "#65eba3"],     //Seagreen colors
+};
+/*
+
+//Pastel colors
+const colors = {
+  herbs: ["#9bc48e", "#c2e0b0"],     //Soft sage greens
+  sep: ["#8bb5e5", "#b8d4f0"],       //Powder blues
+  combat: ["#e8a4a4", "#f5c2c2"],    //Blush pinks
+  worldly: ["#f5e2b8", "#fff0cc"],   //Buttercream yellows
+  walk: ["#d4bc9a", "#ecd9b5"],      //Warm beiges
+  imbues: ["#cfb5e0", "#e8d5f0"],    //Lavender lilacs
+  prog: ["#add9c4", "#ccefe0"],      //Mint greens
+};
+
+//Kawaii colors
+const colors = {
+  herbs: ["#98fb98", "#7cfc00"],      // Fresh mint & lime green 🍀
+  sep: ["#87cefa", "#00bfff"],        // Sky blue & deep ocean blue 🌊
+  combat: ["#ffb6c1", "#ff69b4"],     // Bubblegum pink & hot pink 💕
+  worldly: ["#fff0b5", "#ffd966"],    // Creamy butter & honey gold 🌟
+  walk: ["#d2b48c", "#cd853f"],       // Toffee & caramel latte ☕
+  imbues: ["#e6c3ff", "#d291ff"],     // Lavender mist & grape soda 🍇
+  prog: ["#b0f0c0", "#6fdf9f"],       // Seafoam & jade shimmer ✨
+};
+
+//Bright colors
+const colors = {
+  herbs: ["#00ff9f", "#b0ffd0"],     //Mint & neon seafoam
+  sep: ["#0ff0fc", "#ff6ac4"],       //Cyan & hot pink
+  combat: ["#ff3366", "#ff80ab"],    //Neon pink & coral
+  worldly: ["#ffcc44", "#ffe68f"],   //Gold & neon yellow
+  walk: ["#cc66ff", "#e599ff"],      //Purple neon & lavender
+  imbues: ["#ff44cc", "#ff88e6"],    //Magenta & hot pink
+  prog: ["#44ffaa", "#88ffcc"],      //Turquoise & mint
+};
+
+//Dark colors
+const colors = {
+  herbs: ["#2d5a2a", "#4b8c44"],     //Deep forest greens
+  sep: ["#2c5282", "#3b82b6"],       //Midnight blues
+  combat: ["#7f1a1a", "#b91c1c"],    //Deep burgundy & crimson
+  worldly: ["#b7791f", "#d69e2e"],   //Bronze & amber
+  walk: ["#744210", "#9b6b43"],      //Chocolate & leather
+  imbues: ["#6b21a5", "#9333ea"],    //Deep purple & violet
+  prog: ["#2f6b47", "#3b9b6e"],      //Emerald & jade
+};
+
+//Monochrome
+const colors = {
+  herbs: ["#5a6e5a", "#7d8f7d"],     //Olive gray & sage gray
+  sep: ["#4a5b6e", "#6c7e8f"],       //Steel blue-gray & slate
+  combat: ["#8b5a5a", "#ad7a7a"],    //Muted brick & dusty rose
+  worldly: ["#b59d6b", "#cdb48a"],   //Taupe & khaki
+  walk: ["#8b7355", "#a68b6e"],      //Mushroom & fawn
+  imbues: ["#7a6b8b", "#9b8cad"],    //Lavender gray & wisteria gray
+  prog: ["#6b8b7a", "#8cad9b"],      //Seafoam gray & sage
+};
+//Ocean
+const colors = {
+  herbs: ["#6e9f7e", "#8fc0a9"],     //Seaweed & coastal sage
+  sep: ["#2c7da0", "#61a5c2"],       //Deep ocean & sky blue
+  combat: ["#cd9771", "#e9b28e"],    //Coral reef & sand dollar
+  worldly: ["#e9c46a", "#f4d58c"],   //Seashell gold & beach sand
+  walk: ["#b28b5e", "#d4a373"],      //Driftwood & dune
+  imbues: ["#9c89b8", "#b8a9d4"],    //Twilight purple & wisteria
+  prog: ["#52b788", "#74c69d"],      //Seafoam & turquoise
+};
+
+//Earthy
+const colors = {
+  herbs: ["#6b8c5c", "#8fb06b"],     //Olive & moss
+  sep: ["#6c7a89", "#8a9ba8"],       //Stormy slate & mist
+  combat: ["#c75c3e", "#e07a5f"],    //Terracotta & clay
+  worldly: ["#e6b422", "#f4c542"],   //Goldenrod & marigold
+  walk: ["#9c6e4b", "#b9875a"],      //Saddle brown & caramel
+  imbues: ["#8b5a8c", "#b07dae"],    //Mauve & heather
+  prog: ["#5f8b6f", "#7da57a"],      //Juniper & sage
+};
+*/
+
+// Valid commands
 const validCommands = [
-  "help","all","tab","herbs","walks","kills",
-  "imbues","progress","hunt","coins","bank",
-  "check","reset","save","restore", "init",
-  "progress","prog","newday","add","set"
-]
-//=================
-//THINGS TO OUTPUT
-//=================
-// Usage 
-if(a(1,"help")){
+  "help", "all", "tab", "herbs", "walks", "kills",
+  "imbues", "progress", "hunt", "coins", "bank",
+  "check", "reset", "save", "restore", "init",
+  "progress", "prog", "newday", "add", "set", "delete"
+];
+
+// Data references
+let trax = gwc.userdata.trax;
+let us = gwc.userdata;
+
+// COMMAND HANDLER
+
+// HELP
+if (a(1, "help")) {
   click(
-    "\n=======================================================\n",
-    {type:"color", color:"#00ffff", text:"                 ── Trax Help ──\n\n"},
-
-    {type:"color", color:"#ffaa00", text:"  Basic:\n"},
-    "   ",
-    {type:"cmd", text:"trax help", command:"trax help"},
-    "  - show this menu\n",
-
-    "   ",
-    {type:"cmd", text:"trax tab on", command:"trax tab on"},
-    " / ",
-    {type:"cmd", text:"trax tab off", command:"trax tab off"},
-    "  - toggle tab\n\n",
-
-    {type:"color", color:"#ffaa00", text:"  View Trackers:\n"},
-    "   ",
-    {type:"cmd", text:"trax all", command:"trax all"},
-    "   ",
-    {type:"cmd", text:"herbs", command:"trax herbs"},
-    "   ",
-    {type:"cmd", text:"walks", command:"trax walks"},
-    "   ",
-    {type:"cmd", text:"kills", command:"trax kills"},
-    "\n   ",
-    {type:"cmd", text:"imbues", command:"trax imbues"},
-    "   ",
-    {type:"cmd", text:"progress", command:"trax progress"},
-    "   ",
-    {type:"cmd", text:"hunt", command:"trax hunt"},
-    "\n   ",
-    {type:"cmd", text:"coins", command:"trax coins"},
-    "   ",
-    {type:"cmd", text:"bank", command:"trax bank"},
-    "   ",
-    {type:"cmd", text:"prog", command:"trax prog"},
-    "\n\n",
-
-    {type:"color", color:"#ffaa00", text:"  Data:\n"},
-    "   ",
-    {type:"cmd", text:"init", command:"trax init"},
-    "   ",
-    {type:"cmd", text:"add", command:"trax add"},
-    " / ",
-    {type:"cmd", text:"set", command:"trax set"},
-    "\n   ",
-    {type:"cmd", text:"check", command:"trax check"},
-    "   ",
-    {type:"cmd", text:"check local", command:"trax check local"},
-    "\n   ",
-    {type:"cmd", text:"save", command:"trax save"},
-    "   ",
-    {type:"cmd", text:"restore", command:"trax restore"},
-    "\n   ",
-    {type:"cmd", text:"reset", command:"trax reset"},
-    "   ",
-    {type:"cmd", text:"newday", command:"trax newday"},
-    "\n",
-
-    "=======================================================\n"
+    ezcol("\n=======================================================\n",colors.sep[0]),
+    ezcol("                 ── Trax Help ──\n",colors.worldly[0]),
+    ezcol("Tip: All these are clickable!\n   ▼\n", colors.worldly[0]),
+    ezlink("trax help", "trax help"),    ezcol("    - show this help menu\n"),
+    ezlink("tab on", "trax tab on"),  ezcol("       - turn companion tab on\n"),
+    ezlink("tab off", "trax tab off"), ezcol("      - turn companion tab off"),
+    sep(),
+    ezcol("  View Trackers:\n", colors.worldly[0]),
+    ezlink("trax all", "trax all"),      ezcol("     - all trackers\n"),
+    ezlink("herbs", "trax herbs"),    ezcol("        - herb trackers\n"),
+    ezlink("walks", "trax walks"),    ezcol("        - rooms moved\n"),
+    ezlink("kills", "trax kills"),    ezcol("        - monster kills\n"),
+    ezlink("imbues", "trax imbues"),   ezcol("       - imbues looted\n"),
+    ezlink("progress", "trax progress"), ezcol("     - experience gained\n"),
+    ezlink("hunt", "trax hunt"),     ezcol("         - hunting info\n"),
+    ezlink("coins", "trax coins"),    ezcol("        - coins looted\n"),
+    ezlink("bank", "trax bank"),     ezcol("         - money in the bank"),
+    sep(),
+    ezcol("  Data management:\n", colors.worldly[0]),
+    ezlink("init", "trax init"),        ezcol("         - initialize userdata\n"),
+    ezlink("add", "trax add"),         ezcol("          - add amounts to storage\n"),
+    ezlink("set", "trax set"),         ezcol("          - set amounts of storage\n"),
+    ezlink("check", "trax check"),       ezcol("        - check userdata\n"),
+    ezlink("check local", "trax check local"), ezcol("  - check local storage\n"),
+    ezlink("save", "trax save"),        ezcol("         - save to local storage\n"),
+    ezlink("restore", "trax restore"),     ezcol("      - restore from local\n"),
+    ezlink("reset", "trax reset"),       ezcol("        - reset all data\n"),
+    ezlink("delete", "trax delete"),      ezcol("       - delete all data & disable scripts\n"),
+    ezlink("newday", "trax newday"),      ezcol("       - manually flip daily\n"),
+    
+    ezcol("\nNote: all of these can also be typed. 'trax' + the word\n e.g. 'trax hunt'\n"),
+    ezcol("=======================================================\n",colors.sep[0])
   );
 }
+
 // TOGGLE TAB
-if(a(1, "tab")){
-// Tab status
-  if(!args[2]){
-  out("Trax tab is currently " + trax.tabstatus)
+else if (a(1, "tab")) {
+  if (!args[2]) {
+    out("Trax tab is currently " + trax.tabstatus);
+  } else if (a(2, "on")) {
+    out("Trax tab enabled. Move or <v> to resummon it!");
+    gwc.trigger.enable(tabtrigger);
+    gwc.userdata.trax.tabstatus = "on";
+  } else if (a(2, "off")) {
+    out("Trax tab has been disabled!");
+    gwc.trigger.disable(tabtrigger);
+    gwc.userdata.trax.tabstatus = "off";
+    removeTab();
   }
-// Tab on
-else if(a(2, "on")){
-  out("Trax tab enabled. Move or <v> to resummon it!")
-  gwc.trigger.enable(triggername)
-  gwc.userdata.trax.tabstatus = "on"
-  }
-// Tab off
-else if(a(2, "off")){
- out("Trax tab has been disabled!")
-  gwc.trigger.disable(triggername)
-  gwc.userdata.trax.tabstatus = "off"
-  removeTab()
-  }
-  
 }
 
-//=====================
-//OUTPUT INFORMATION
-//=====================
 // SHOW ALL
-else if(a(1, "all")){
-  newsec()
-  
-out("                 Adventuring", "#55e8ec")
-herbs()
-walks()
+else if (a(1, "all")) {
+  newsec();
+  out("                 Adventuring", colors.walk[1]);
+  herbs();
+  walks();
   sep();
-out("                 Progress",c.prog[1])
-  progress()
-mimprove()
-  sep()
-out("                  Worldly", c.worldly [1])
-  bank()
-coins()
-imbues()
+  out("                 Progress", colors.prog[1]);
+  progress();
+  mimprove();
   sep();
-
-  out("                 Combat", c.combat[1])
-killz()
-  hunting()
-  endsec()
-}
-//SHOW HERBS
-else if(a(1, "herbs")){
-  newsec()
-  out("                  Herbs",c.herbs[1])
-  herbs()
-  endsec()
-}
-//SHOW WALKS
-else if(a(1, "walks")){
- newsec()
-out("                Walking",c.walk[0])
-  walks()
-  endsec()
-}
-//SHOW KILLS
-else if(a(1, "kills")){
-  newsec()
-  out("                  Kills",c.combat[1])
- killz() 
-  endsec()
-}
-//HUNTING INFO
-else if(a(1, "hunt")){
-  newsec()
-  out("              Hunting info",c.combat[1])
- hunting() 
-  endsec()
-}
-//MORTAL PROGRESS
-else if(a(1, "progress")){
-newsec()
-out("             Mortal Progress", c.walk[1])
-mimprove()
-endsec()
-}
-//IMBUES
-else if(a(1, "imbues")){
-   newsec()
-out("           Gathered Imbuements")
-  imbues()
-  endsec()
-   }
-//WORLDLY
-else if(a(1, "coins")){
-  newsec() 
-  out("            Coins Collected")
-  coins()
-  endsec()
-}
-//BANK
-else if(a(1, "bank")){
-  newsec()
-  bank()
-  endsec()
-}
-//PROGRESS
-else if(a(1, "progress") || a(1, "prog")){
-  newsec()
-  progress()
-  cout("Best day for EXP: ", c.prog[0], trax.progress.bestday.date + " (" + trax.progress.bestday.amount + ")",c.prog[1])
-  mimprove()
-  endsec()
-}
-//===============================
-//STORAGE OPTIONS
-//===============================
-
-//Manual new day
-else if(a(1, "newday")){
-out("Daily storages have been reset!")
-trax.killz.today = 0
-trax.imbues.session = 0
-trax.herbs.today = 0
-trax.progress.today = 0
-storeCurrentDate()
+  out("                  Worldly", colors.worldly[1]);
+  bank();
+  coins();
+  imbues();
+  sep();
+  out("                 Combat", colors.combat[1]);
+  killz();
+  hunting();
+  endsec();
 }
 
-//CHECK USERDATA - Credit to Faery for this script!
-else if(a(1, "check")){
-  if(!args[2]){
-   gwc.output.append(JSON.stringify(gwc.userdata.trax, function(key, value) {
-    if (typeof value === 'function') return value.toString();
-    return value;
-}, 2));
+// SHOW HERBS
+else if (a(1, "herbs")) {
+  newsec();
+  out("                  Herbs", colors.herbs[1]);
+  herbs();
+  endsec();
 }
-  if(a(2, "local")){
-     checkTrax()
-     }
-   }
+
+// SHOW WALKS
+else if (a(1, "walks")) {
+  newsec();
+  out("                Walking", colors.walk[0]);
+  walks();
+  endsec();
+}
+
+// SHOW KILLS
+else if (a(1, "kills")) {
+  newsec();
+  out("                  Kills", colors.combat[1]);
+  killz();
+  endsec();
+}
+
+// HUNTING INFO
+else if (a(1, "hunt")) {
+  newsec();
+  out("              Hunting info", colors.combat[1]);
+  hunting();
+  endsec();
+}
+
+// PROGRESS
+else if (a(1, "progress") || a(1, "prog")) {
+  newsec();
+  out("             Mortal Progress", colors.walk[1]);
+  progress();
+  mimprove();
+  endsec();
+}
+
+// IMBUES
+else if (a(1, "imbues")) {
+  newsec();
+  out("           Gathered Imbuements");
+  imbues();
+  endsec();
+}
+
+// COINS
+else if (a(1, "coins")) {
+  newsec();
+  out("            Coins Collected");
+  coins();
+  endsec();
+}
+
+// BANK
+else if (a(1, "bank")) {
+  newsec();
+  bank();
+  endsec();
+}
+
+// MANUAL NEW DAY
+else if (a(1, "newday")) {
+  out("Daily storages have been reset!");
+  trax.killz.today = 0;
+  trax.imbues.session = 0;
+  trax.herbs.today = 0;
+  trax.progress.today = 0;
+  trax.currentdate = getDate()
+}
+
+// CHECK USERDATA
+else if (a(1, "check")) {
+  if (!args[2]) {
+    gwc.output.append(JSON.stringify(gwc.userdata.trax, function(key, value) {
+      if (typeof value === 'function') return value.toString();
+      return value;
+    }, 2));
+  }
+  if (a(2, "local")) {
+    checkTrax();
+  }
+}
 
 // ADD TO DATA
-else if(a(1,"add")){
-let type = args[2]
-// help info
-  if(!args[2]){
+else if (a(1, "add")) {
+  let type = args[2];
+  
+  if (!args[2]) {
     out(`---------------------------------------
 Manually add amounts to data. 
 Valid options are listed below:
@@ -530,136 +617,104 @@ Valid options are listed below:
     fantas
   coins
     copper | silver | gold | platinum
----------------------------------------`)
+---------------------------------------`);
   }
-  //COINS
-else if (type === "coins") {
-  let subType = args[3];
-  let amount;
-  //add to alltime
-  if (ISN(subType)) {
-    amount = ISN(subType);
-
-    trax.coinloot.alltime += amount;
-    out("Added " + amount + " to alltime coins");
+  
+  // COINS
+  else if (type === "coins") {
+    let subType = args[3];
+    let amount;
+    
+    if (ISN(subType)) {
+      amount = ISN(subType);
+      trax.coinloot.alltime += amount;
+      out("Added " + amount + " to alltime coins");
+    } else if ((subType === "gold" || subType === "platinum" || subType === "silver" || subType === "copper") && ISN(args[4])) {
+      amount = ISN(args[4]);
+      trax.coinloot[subType] += amount;
+      out("Added " + amount + " to " + subType + " coins");
+    } else {
+      out("Invalid command. Usage:");
+      out("trax add coins amount    - add to total coins");
+      out("trax add coins copper|silver|gold|platinum amount    - add to specific coin type");
+    }
   }
-
-  //add to subtypes
-  else if (
-    (subType === "gold" ||
-     subType === "platinum" ||
-     subType === "silver" ||
-     subType === "copper") &&
-    ISN(args[4])
-  ) {
-    amount = ISN(args[4]);
-
-    trax.coinloot[subType] += amount;
-    out("Added " + amount + " to " + subType + " coins");
-  }
-
-  // INVALID INPUT
-  else {
-    out("Invalid command. Usage:");
-    out("trax add coins amount    - add to total coins");
-    out("trax add coins copper|silver|gold|platinum amount    - add to specific coin type");
-  }
-}
+  
   // PROGRESS
-  else if(type == "progress"){
-    let amount = ISN(args[3])
-     if(ISN(args[3])){
-       out("Added " + amount + " to all time progress levels")
-       trax.progress.levels += amount
-    }
-    //add to fantas
-    else if(args[3] == "fantas"){
-      let amount = ISN(args[4])
-      if(amount){
-        out("Added " + amount + " to all time fantas")
-        trax.progress.fantas += amount
+  else if (type == "progress") {
+    let amount = ISN(args[3]);
+    if (ISN(args[3])) {
+      out("Added " + amount + " to all time progress levels");
+      trax.progress.levels += amount;
+    } else if (args[3] == "fantas") {
+      let amount = ISN(args[4]);
+      if (amount) {
+        out("Added " + amount + " to all time fantas");
+        trax.progress.fantas += amount;
       }
-    }
-    //Bad input
-    else if(!ISN(args[3]) || !args[3]){
-     out("Not a valid command. Usage is <add progress amount> | <add progress fantas amount>")
+    } else if (!ISN(args[3]) || !args[3]) {
+      out("Not a valid command. Usage is <add progress amount> | <add progress fantas amount>");
     }
   }
   
-  //WALKS
-  else if(type == "walks"){
-    let amount = ISN(args[3])
-     if(ISN(args[3])) {
-       out("Added " + amount + " to all time " + type)
-       trax.walks.alltime += amount
-    }
-    else if(!ISN(args[3]) || !args[3]){
-     out("Not a valid command. Usage is <add type amount>")
-    }
-  }
-  
-  //KILLS
-  else if(type == "kills"){
-    let amount = ISN(args[3])
-     if(ISN(args[3])) {
-       out("Added " + amount + " to all time " + type)
-       trax.killz.alltime += amount
-    }
-    else if(!ISN(args[3]) || !args[3]){
-     out("Not a valid command. Usage is <add type amount>")
+  // WALKS
+  else if (type == "walks") {
+    let amount = ISN(args[3]);
+    if (ISN(args[3])) {
+      out("Added " + amount + " to all time " + type);
+      trax.walks.alltime += amount;
+    } else if (!ISN(args[3]) || !args[3]) {
+      out("Not a valid command. Usage is <add type amount>");
     }
   }
   
-  //HERBS
-  else if(type == "herbs"){
-    let amount = ISN(args[3])
-     if(ISN(args[3])) {
-       out("Added " + amount + " to all time " + type)
-       trax.herbs.alltime += amount
-    }
-    else if(!ISN(args[3]) || !args[3]){
-     out("Not a valid command. Usage is <add type amount>")
+  // KILLS
+  else if (type == "kills") {
+    let amount = ISN(args[3]);
+    if (ISN(args[3])) {
+      out("Added " + amount + " to all time " + type);
+      trax.killz.alltime += amount;
+    } else if (!ISN(args[3]) || !args[3]) {
+      out("Not a valid command. Usage is <add type amount>");
     }
   }
   
-//IMBUES
-else if (type === "imbues") {
-  let subType = args[3];
-  let amount;
-  //add to alltime
-  if (ISN(subType)) {
-    amount = ISN(subType);
-
-    trax.imbues.alltime += amount;
-    out("Added " + amount + " to alltime imbues");
+  // HERBS
+  else if (type == "herbs") {
+    let amount = ISN(args[3]);
+    if (ISN(args[3])) {
+      out("Added " + amount + " to all time " + type);
+      trax.herbs.alltime += amount;
+    } else if (!ISN(args[3]) || !args[3]) {
+      out("Not a valid command. Usage is <add type amount>");
+    }
   }
-
-  //add to subtypes
-  else if (
-    (subType === "unusual" ||
-     subType === "peculiar" ||
-     subType === "exotic") &&
-    ISN(args[4])
-  ) {
-    amount = ISN(args[4]);
-
-    trax.imbues[subType] += amount;
-    out("Added " + amount + " to " + subType + " imbues");
-  }
-
-  // INVALID INPUT
-  else {
-    out("Invalid command. Usage:");
-    out("trax add imbues amount");
-    out("trax add imbues unusual|peculiar|exotic amount");
+  
+  // IMBUES
+  else if (type === "imbues") {
+    let subType = args[3];
+    let amount;
+    
+    if (ISN(subType)) {
+      amount = ISN(subType);
+      trax.imbues.alltime += amount;
+      out("Added " + amount + " to alltime imbues");
+    } else if ((subType === "unusual" || subType === "peculiar" || subType === "exotic") && ISN(args[4])) {
+      amount = ISN(args[4]);
+      trax.imbues[subType] += amount;
+      out("Added " + amount + " to " + subType + " imbues");
+    } else {
+      out("Invalid command. Usage:");
+      out("trax add imbues amount");
+      out("trax add imbues unusual|peculiar|exotic amount");
+    }
   }
 }
-}
+
 // SET DATA
 else if (a(1, "set")) {
   let type = args[2];
-
-  // HELP
+  
   if (!args[2]) {
     out(`---------------------------------------
 Manually set values of data 
@@ -676,57 +731,43 @@ Valid options are listed below:
     copper | silver | gold | platinum
 ---------------------------------------`);
   }
-
+  
   // COINS
   else if (type === "coins") {
     let subType = args[3];
-
+    
     if (ISN(subType)) {
       let amount = ISN(subType);
       trax.coinloot.alltime = amount;
       out("Set alltime coins to " + amount);
-    }
-
-    else if (
-      (subType === "copper" ||
-       subType === "silver" ||
-       subType === "gold" ||
-       subType === "platinum") &&
-      ISN(args[4])
-    ) {
+    } else if ((subType === "copper" || subType === "silver" || subType === "gold" || subType === "platinum") && ISN(args[4])) {
       let amount = ISN(args[4]);
       trax.coinloot[subType] = amount;
       out("Set " + subType + " coins to " + amount);
-    }
-
-    else {
+    } else {
       out("Invalid command. Usage:");
       out("trax set coins amount");
       out("trax set coins copper|silver|gold|platinum amount");
     }
   }
-
+  
   // PROGRESS
   else if (type === "progress") {
     if (ISN(args[3])) {
       let amount = ISN(args[3]);
       trax.progress.levels = amount;
       out("Set progress levels to " + amount);
-    }
-
-    else if (args[3] === "fantas" && ISN(args[4])) {
+    } else if (args[3] === "fantas" && ISN(args[4])) {
       let amount = ISN(args[4]);
       trax.progress.fantas = amount;
       out("Set fantas to " + amount);
-    }
-
-    else {
+    } else {
       out("Invalid command. Usage:");
       out("trax set progress amount");
       out("trax set progress fantas amount");
     }
   }
-
+  
   // WALKS
   else if (type === "walks") {
     let amount = ISN(args[3]);
@@ -737,7 +778,7 @@ Valid options are listed below:
       out("Invalid command. Usage: trax set walks amount");
     }
   }
-
+  
   // KILLS
   else if (type === "kills") {
     let amount = ISN(args[3]);
@@ -748,7 +789,7 @@ Valid options are listed below:
       out("Invalid command. Usage: trax set kills amount");
     }
   }
-
+  
   // HERBS
   else if (type === "herbs") {
     let amount = ISN(args[3]);
@@ -759,430 +800,325 @@ Valid options are listed below:
       out("Invalid command. Usage: trax set herbs amount");
     }
   }
-
+  
   // IMBUES
   else if (type === "imbues") {
     let subType = args[3];
-
+    
     if (ISN(subType)) {
       let amount = ISN(subType);
       trax.imbues.alltime = amount;
       out("Set alltime imbues to " + amount);
-    }
-
-    else if (
-      (subType === "unusual" ||
-       subType === "peculiar" ||
-       subType === "exotic") &&
-      ISN(args[4])
-    ) {
+    } else if ((subType === "unusual" || subType === "peculiar" || subType === "exotic") && ISN(args[4])) {
       let amount = ISN(args[4]);
       trax.imbues[subType] = amount;
       out("Set " + subType + " imbues to " + amount);
-    }
-
-    else {
+    } else {
       out("Invalid command. Usage:");
-      out("trax set imbues amount");
+      out("trax set imbues amount   - add to total imbues");
       out("trax set imbues unusual|peculiar|exotic amount");
     }
   }
 }
-//SAVE DATA
-else if(a(1, "save")){
-  backupTrax()
+
+// SAVE DATA
+else if (a(1, "save")) {
+  backupTrax();
+  saveDate();
 }
-//RESTORE DATA
-else if(a(1, "restore")){
-  loadTrax()
+
+// RESTORE DATA
+else if (a(1, "restore")) {
+  loadTrax();
 }
-//RESET
-else if(a(1, "reset")){
-if(!args[2]){
-  out("Are you sure you want to reset all tracked data? This wipes browser storage too! <trax reset confirm> to continue")
-}
-else if(args[2] == "confirm"){
-out("Userdata has been reset and browser data has been wiped")
-      gwc.userdata.trax = {
-      killz: { 
-        today: 0, 
-        alltime: 0 },
-      herbs: { 
-        today: 0, 
-        alltime: 0 },
-      imbues: {
-        alltime: 0,
-        session: 0,
-        unusual: 0,
-        peculiar: 0,
-        exotic: 0
-      },
-      coinloot: {
-        total: 0,
-        platinum: 0,
-        gold: 0,
-        silver: 0,
-        copper: 0
-      },
-      nextlevel: {
-        percent: "unknown",
-        rank: "unknown"
-      },
+
+// RESET
+else if (a(1, "reset")) {
+  if (!args[2]) {
+    out("Are you sure you want to reset all tracked data? Type <trax reset confirm> to continue");
+  } else if (args[2] == "confirm") {
+    out("Userdata has been reset!");
+    gwc.userdata.trax = {
+      killz: { today: 0, alltime: 0 },
       walks: { alltime: 0 },
+      herbs: { today: 0, alltime: 0 },
+      imbues: { alltime: 0, session: 0, unusual: 0, peculiar: 0, exotic: 0 },
+      coinloot: { total: 0, platinum: 0, gold: 0, silver: 0, copper: 0 },
+      nextlevel: { percent: 0, rank: "unknown" },
       bankacc: 0,
       currentdate: "unknown",
-        
-   progress: {
-    current: gwc.gmcp.data.character.vitals.progress,
-    levels: 0,
-    today: 0,
-    fantas: 0,
-
-    bestday: {
-      date: "",
-      amount: 0}
-   }
-};
-localStorage.removeItem("traxBackup");
-}
-}
-else if(a(1, "init")){
-        if(!gwc.userdata.trax){
-      out("Trax storage initialized!")
-
-      gwc.userdata.trax = {
-      killz: { 
-        today: 0, 
-        alltime: 0 },
-      herbs: { 
-        today: 0, 
-        alltime: 0 },
-      imbues: {
-        alltime: 0,
-        session: 0,
-        unusual: 0,
-        peculiar: 0,
-        exotic: 0
+      progress: {
+        current: gwc.gmcp.data.character.vitals.progress,
+        levels: 0,
+        today: 0,
+        fantas: 0,
+        bestday: { date: "", amount: 0 }
       },
-      coinloot: {
-        total: 0,
-        platinum: 0,
-        gold: 0,
-        silver: 0,
-        copper: 0
-      },
-      nextlevel: {
-        percent: 0,
-        rank: "unknown"
-      },
-      walks: { alltime: 0 },
-      bankacc: 0,
-      currentdate: "unknown",
-
-  progress: {
-    current: gwc.gmcp.data.character.vitals.progress,
-    levels: 0,
-    today: 0,
-    fantas: 0,
-
-    bestday: {
-      date: "",
-      amount: 0
+      tabstatus: "",
+      caneatherb: "",
+      canstrength: true
+    };
   }
 }
+
+// DELETE
+else if (a(1, "delete")) {
+  if(!args[2]){
+    out("Are you sure you want to delete all Trax data? Local browser storage will be deleted too! 'trax delete confirm' if you're totally sure!")
+  } else if(args[2] == "confirm") {
+    out("Userdata and browser storage have been deleted!")
+    delete gwc.userdata.trax
+    localStorage.removeItem("lastSaved")
+    localStorage.removeItem("traxBackup")
+    gwc.trigger.disable(tabtrigger)
+    gwc.trigger.disable(roomtracker)
+    gwc.trigger.disable(maintracker)
+  }
+}
+
+// INIT
+else if (a(1, "init")) {
+  if (!gwc.userdata.trax) {
+    gwc.userdata.trax = {
+      killz: { today: 0, alltime: 0 },
+      walks: { alltime: 0 },
+      herbs: { today: 0, alltime: 0 },
+      imbues: { alltime: 0, session: 0, unusual: 0, peculiar: 0, exotic: 0 },
+      coinloot: { total: 0, platinum: 0, gold: 0, silver: 0, copper: 0 },
+      nextlevel: { percent: 0, rank: "unknown" },
+      bankacc: 0,
+      currentdate: "unknown",
+      progress: {
+        current: gwc.gmcp.data.character.vitals.progress,
+        levels: 0,
+        today: 0,
+        fantas: 0,
+        bestday: { date: "", amount: 0 }
+      },
+      tabstatus: "",
+      caneatherb: "",
+      canstrength: true
+    };
+    if (gwc.userdata.trax) {
+      out("Data initialized!");
     }
-        }
-  else if(gwc.userdata.trax){
-    out("Trax storage is already initialized. At least I think so, <trax check> to be sure!")
+  } else if (gwc.userdata.trax) {
+    click(ezcol("Trax storage is already initialized. At least I think so, "), 
+          ezlink("trax check", "trax check"),
+          ezcol(" to be sure!")
+         );
   }
-        }
-// If no storage
-else if(!trax){
-  out("No Trax data detected yet! <trax init> to initialize.", "red")
 }
-else if(!args["*"]){
-  out(
-`Enter <trax tab on> to enable companion tab.
-For help on all commands, enter <trax help>`)
+
+// NO STORAGE DETECTED
+else if (!trax) {
+  ezcol("No userdata detected! ", "red");
+  ezlink("Click to initialize", "trax init");
 }
+
+// DEFAULT HELP
+else if (!args[1]) {
+  click(ezcol("Enter "), ezlink("'trax tab on'", "trax tab on"), ezcol(" to enable companion tab.\nFor help on all commands,"),ezlink(" click me", "trax help"));
+}
+
+// INVALID COMMAND
 else if (args[1] && !validCommands.includes(args[1])) {
-  out(`Unidentified syntax, <trax help> for usage information`);
+  click(ezcol("Unidentified syntax, "), ezlink("'trax help'", "trax help"), ezcol(" for usage information"))
 }
-  
-//Easily access display data
+// ============================================
+// SECTION DISPLAY FUNCTIONS
+// ============================================
 
-//Herbs
-function herbs(){
-if(trax.herbs.alltime != 0){
- cout("Herbs found all time: ",c.herbs[0],fn(trax.herbs.alltime),c.herbs[1])
+//Gui things
+function newsec() {
+  out("╔══════════════════《✧》══════════════════╗", colors.sep[0]);
 }
-if(trax.herbs.today != 0){
-  cout("Herbs found today: ", c.herbs[0],fn(trax.herbs.today),c.herbs[1])
+function endsec() {
+  out("╚══════════════════《✧》══════════════════╝", colors.sep[0]);
 }
-else{
-    out("You've found no herbs today",c.herbs[0])
+
+//Herbs picked
+function herbs() {
+  if (trax.herbs.alltime != 0) {
+    cout("Herbs found all time: ", colors.herbs[0], fn(trax.herbs.alltime), colors.herbs[1]);
+  }
+  if (trax.herbs.today != 0) {
+    cout("Herbs found today: ", colors.herbs[0], fn(trax.herbs.today), colors.herbs[1]);
+  } else {
+    out("You've found no herbs today", colors.herbs[0]);
   }
 }
-//Room movement
-function walks(){
-cout("All time rooms moved: ",c.walk[1], fn(trax.walks.alltime), c.walk[0])
+
+//Rooms moved
+function walks() {
+  cout("All time rooms moved: ", colors.walk[1], fn(trax.walks.alltime), colors.walk[0]);
 }
-//Next rank
-function mimprove(){
-  cout("Progress to " + trax.nextlevel.rank + ": ", c.herbs[1], makeBar(trax.nextlevel.percent,14), c.herbs[0])
+
+//Mortal progress
+function mimprove() {
+  cout("Progress to " + trax.nextlevel.rank + ": ", colors.herbs[1], makeBar(trax.nextlevel.percent, 14), colors.herbs[0]);
 }
-//Bank
-function bank(){
- cout("Money in the bank: ", c.worldly[0], fn(trax.bankacc) + " platinum", c.worldly[1]) 
+
+//Bank money
+function bank() {
+  cout("Money in the bank: ", colors.worldly[0], fn(trax.bankacc) + " platinum", colors.worldly[1]);
 }
-// Coins
-function coins(){
-  
-    cout("Total coins looted: ",c.worldly[0],trax.coinloot.total,c.worldly[1])
-      if(trax.coinloot.platinum != 0){
-    cout("  Platinum coins looted: ",c.worldly[0],fn(trax.coinloot.platinum),"#E5E4E2")
-      }
-      if(trax.coinloot.gold != 0){
-    cout("  Gold coins looted: ",c.worldly[0],fn(trax.coinloot.gold),"#FFD700")
-      }
-      if(trax.coinloot.silver != 0){
-    cout("  Silver coins looted: ",c.worldly[0],fn(trax.coinloot.silver),"#C0C0C0")
-      }
-      if(trax.coinloot.copper != 0){
-    cout("  Copper coins looted: ",c.worldly[0],fn(trax.coinloot.copper),"#B87333")
-      }
-}
-// Imbues
-function imbues(){
-cout("Total imbues found: " , c.imbues[0], trax.imbues.alltime,c.imbues[1])
-if(trax.imbues.exotic !=0){
- cout("  Total exotic imbues: ", c.imbues[0] , trax.imbues.exotic, c.imbues[1]) 
-}
-  if(trax.imbues.peculiar !=0){
- cout("  Total peculiar imbues: ", c.imbues[0] , trax.imbues.peculiar, c.imbues[1]) 
-}
-  if(trax.imbues.unusual !=0){
- cout("  Total unusual imbues: ", c.imbues[0] , trax.imbues.unusual, c.imbues[1]) 
-}
-  
-  if(trax.imbues.session != 0){
-    cout("Imbues found this session: " , c.imbues[0], trax.imbues.session,c.imbues[1])
+
+//Coins looted
+function coins() {
+  cout("Total coins looted: ", colors.worldly[0], trax.coinloot.total, colors.worldly[1]);
+  if (trax.coinloot.platinum != 0) {
+    cout("  Platinum coins looted: ", colors.worldly[0], fn(trax.coinloot.platinum), "#E5E4E2");
+  }
+  if (trax.coinloot.gold != 0) {
+    cout("  Gold coins looted: ", colors.worldly[0], fn(trax.coinloot.gold), "#FFD700");
+  }
+  if (trax.coinloot.silver != 0) {
+    cout("  Silver coins looted: ", colors.worldly[0], fn(trax.coinloot.silver), "#C0C0C0");
+  }
+  if (trax.coinloot.copper != 0) {
+    cout("  Copper coins looted: ", colors.worldly[0], fn(trax.coinloot.copper), "#B87333");
   }
 }
-  // Exosphere hunt script compatibility
-function hunting(){
-  if(us.huntonoff && us.huntPathList){
-   out("Hunting is currently " + us.huntonoff, c.combat[0]) 
+
+//Imbues
+function imbues() {
+  cout("Total imbues found: ", colors.imbues[0], trax.imbues.alltime, colors.imbues[1]);
+  if (trax.imbues.exotic != 0) {
+    cout("  Total exotic imbues: ", colors.imbues[0], trax.imbues.exotic, colors.imbues[1]);
   }
-  
-if (us.huntAliasName && us.huntonoff == "on") {
-  let roomc = us.roomCounter; if(us.roomCounter == 0){ roomc = 1 }
-  let pathprog = toWhole((roomc / us.currentPath.length) * 100);
-  let paused = " " + us.roomCounter + "/" + us.currentPath.length;
-  if (us.huntpaused === true) { paused = " (Paused)" }
-    cout("Hunting " + us.currentScript + ": ",
-         c.combat[0],
-         makeBar(pathprog, 14) + paused,
-         c.combat[1]);
-}
-}
-// Kills
-function killz(){
-   if(trax.killz.alltime != 0){
-    cout("All time kills: " , c.combat[0], trax.killz.alltime,c.combat[1])
+  if (trax.imbues.peculiar != 0) {
+    cout("  Total peculiar imbues: ", colors.imbues[0], trax.imbues.peculiar, colors.imbues[1]);
   }
-    if(trax.killz.today != 0){
-    cout("Today's kills:" , c.combat[0], trax.killz.today, c.combat[1])
-  } 
-  else if(trax.killz.today == 0){
-          out("No kills today",c.combat[0])
-          }
+  if (trax.imbues.unusual != 0) {
+    cout("  Total unusual imbues: ", colors.imbues[0], trax.imbues.unusual, colors.imbues[1]);
+  }
+  if (trax.imbues.session != 0) {
+    cout("Imbues found this session: ", colors.imbues[0], trax.imbues.session, colors.imbues[1]);
+  }
 }
+
+//Hunting status
+function hunting() {
+  if (us.huntonoff && us.huntPathList) {
+    out("Hunting is currently " + us.huntonoff, colors.combat[0]);
+  }
+  if (us.huntAliasName && us.huntonoff == "on") {
+    let roomc = us.roomCounter;
+    if (us.roomCounter == 0) roomc = 1;
+    let pathprog = toWhole((roomc / us.currentPath.length) * 100);
+    let paused = " " + us.roomCounter + "/" + us.currentPath.length;
+    if (us.huntpaused === true) paused = " (Paused)";
+    cout("Hunting " + us.currentScript + ": ", colors.combat[0], makeBar(pathprog, 14) + paused, colors.combat[1]);
+  }
+}
+
+//Kills
+function killz() {
+  if (trax.killz.alltime != 0) {
+    cout("All time kills: ", colors.combat[0], trax.killz.alltime, colors.combat[1]);
+  }
+  if (trax.killz.today != 0) {
+    cout("Today's kills: ", colors.combat[0], trax.killz.today, colors.combat[1]);
+  } else if (trax.killz.today == 0) {
+    out("No kills today", colors.combat[0]);
+  }
+}
+
 //Progress
-function progress(){
+function progress() {
+  let fantaeq = toWhole(trax.progress.levels / 18);
+  let fantaeqt = toWhole(trax.progress.today / 18);
   
- if(trax.progress.levels == 0){
-   out("No progress has been recorded yet.",c.prog[0])
- }
-  else if(trax.progress.levels != 0){
-          cout("Total progress levels: " ,c.prog[0], trax.progress.levels,c.prog[1])
-          }
-  if(trax.progress.today == 0){
-   out("No progress made today",c.prog[0]) 
+  if (trax.progress.levels == 0) {
+    out("No progress has been recorded yet.", colors.prog[0]);
+  } else if (trax.progress.levels != 0) {
+    cout("Total progress levels: ", colors.prog[0], trax.progress.levels + " = " + fantaeq + " fantas", colors.prog[1]);
   }
-  else if(trax.progress.today != 0){
-   cout("Progress levels today: ", c.prog[0],trax.progress.today,c.prog[1])
-  }
-  if(trax.progress.fantas == 0){
-   out("No fantastics recorded yet." ,c.prog[0])
-  }
-  else if(trax.progress.fantas != 0){
-           cout("Total Fantastics: " ,c.prog[0], trax.progress.fantas,c.prog[1])
-  }
-}
-//Sections
-function newsec(){
- out("╔══════════════════《✧》══════════════════╗",c.sep[0]); 
-}
-function endsec(){
- out("╚══════════════════《✧》══════════════════╝",c.sep[0]);
-}
-
-
-
-//==================
-// FUNCTIONS
-//==================
-
-// REMOVE TAB FUNCTION
-function removeTab() {
-  $('#bottomsidebar .idTabs a[href="#character"]')
-    .parent()
-    .remove();
-  $('#character').remove();
-  $('a[href="#communication"]').click();
-}
-
-function out(text, color = "#b440db"){
-  gwc.output.append(text,color)
-}
-
-// append with 2 colors
-function cout (text1 , color1 = "", text2="", color2=""){
   
-gwc.output.append(text1 + text2, color1);
-  
-  if(color2 && text2){
-  gwc.output.replace(text2 , color(text2, color2));
+  if (trax.progress.today == 0) {
+    out("No progress made today", colors.prog[0]);
+  } else if (trax.progress.today != 0) {
+    cout("Progress levels today: ", colors.prog[0], trax.progress.today + " = " + fantaeqt + " fantas", colors.prog[1]);
   }
-
+  
+  if (trax.progress.fantas == 0) {
+    out("No fantastics recorded yet.", colors.prog[0]);
+  } else if (trax.progress.fantas != 0) {
+    cout("Total Fantastics: ", colors.prog[0], trax.progress.fantas, colors.prog[1]);
+  }
 }
 
-// Easy coloring
-  function color(text, color) { 
-  return `<span style="color:${color};">${text}</span>` ; 
-}
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-// Chop decimals
+//output
+function out(text, color = defaultcolor) {
+  gwc.output.append(text, color);
+}
+//append with multiple colors
+function cout(text1, color1 = "", text2 = "", color2 = "") {
+  gwc.output.append(text1 + text2, color1);
+  if (color2 && text2) {
+    gwc.output.replace(text2, color(text2, color2));
+  }
+}
+//Easier hmtl coloring
+function color(text, color) {
+  return `<span style="color:${color};">${text}</span>`;
+}
+//Chop decimals
 function toWhole(num) {
   return Math.trunc(num);
 }
-
-// Make bar 
-  function makeBar(percent, length = 20) {
-    percent = Math.max(0, Math.min(100, percent)); // clamp
-    
-    let filled = Math.round((percent / 100) * length);
-    let empty = length - filled;
-  
-    let bar = "█".repeat(filled) + "-".repeat(empty);
-  
-    return `[${bar}] ${percent}%`;
-  }
-
-// Separator
-function sep(color = c.sep[1]) {
-    let sepp = `<span style="
-      display:block;
-      font-size:10px;
-      line-height:8px;
-      color:${color};
-      letter-spacing:0px;
-    ">     ─────────────────────────────────────────────────</span>`;
-    gwc.output.append("SEPARATOR");gwc.output.replace("SEPARATOR",sepp)
-  }
-
-// Add commas to numbers
- function fn(num) {
- if (num == null) return "0";
- return Number(num).toLocaleString();
- }
-
+//Bar function
+function makeBar(percent, length = 20) {
+  percent = Math.max(0, Math.min(100, percent));
+  let filled = Math.round((percent / 100) * length);
+  let empty = length - filled;
+  let bar = "█".repeat(filled) + "-".repeat(empty);
+  return `[${bar}] ${percent}%`;
+}
+//Amountifier
+function fn(num) {
+  if (num == null) return "0";
+  return Number(num).toLocaleString();
+}
 // Easier args
 function a(index, word) {
   return args[index] === word;
 }
-
-// SAVE BACKUP 
-function backupTrax() {
-  let trax = gwc.userdata.trax;
-  if (!trax){
-    out("No trax userdata to back up!")
-  }
-else if(trax){
- localStorage.setItem("traxBackup", JSON.stringify(trax));
- 
-  let saved = localStorage.getItem("traxBackup")
-  let parsed = JSON.parse(saved);
-
-      if (parsed && parsed.killz && parsed.coinloot) {
-      out("Data successfully backed up!");
-    }
+// Be sure numbers are numbers
+function ISN(value) {
+  const num = Number(value);
+  if (!Number.isInteger(num)) return false;
+  return num;
 }
+// Easier clickers
+function ezlink(txt, cmd) {
+  return { type: "cmd", text: txt, command: cmd };
 }
-
-// LOAD BACKUP
-function loadTrax() {
-  let saved = localStorage.getItem("traxBackup");
-  if (!saved){
-   out("No browser storage detected!") 
-  }
-  
-else if(saved){
-    let parsed = JSON.parse(saved);
-
-      if (parsed && parsed.killz && parsed.coinloot) {
-      gwc.userdata.trax = parsed;
-      out("Data restored from backup!");
-    }
+// Easier colors
+function ezcol(txt, colr = helpcolor){
+  return { type: "color", text: txt, color: colr }
 }
+// Separator
+function sep() {
+  return ezcol("\n─────────────────────────────────────────\n");
 }
 
-//CHECK BACKUP
-function checkTrax() {
-  let saved = localStorage.getItem("traxBackup");
-  if (!saved){
-   out("No browser storage detected!") 
-  }
-  
-else if(saved){
-    let parsed = JSON.parse(saved);
-      if (parsed && parsed.killz && parsed.coinloot) {
-      out("Data is detected in storage!");
-    }
-}
-}
-
-// CLICKABLE TEXT
+// Clickable text
 function click(...parts) {
   let output = "";
-
   parts.forEach((p, i) => {
-    // Plain text
     if (typeof p === "string") {
       output += p;
-    }
-
-    // Colored text
-    else if (p.type === "color") {
+    } else if (p.type === "color") {
       output += `<span style="color:${p.color};">${p.text}</span>`;
-    }
-
-    // Clickable command
-    else if (p.type === "cmd") {
+    } else if (p.type === "cmd") {
       let id = "cmd_" + Date.now() + "_" + i;
-
-      output += `<a href="#" id="${id}" style="
-        display:inline;
-        width:auto;
-        color:${p.color || 'cyan'};
-        text-decoration:none;
-        border:none;
-        padding:0;
-        margin:0;
-        cursor:pointer;
-      ">${p.text}</a>`;
-
+      output += `<a href="#" id="${id}" style="display:inline; width:auto; color:${p.color || clickcolor}; text-decoration:none; border:none; padding:0; margin:0; cursor:pointer;">${p.text}</a>`;
       setTimeout(() => {
         let el = document.getElementById(id);
         if (el) {
@@ -1192,23 +1128,9 @@ function click(...parts) {
           };
         }
       }, 0);
-    }
-
-    // Clickable function
-    else if (p.type === "func") {
+    } else if (p.type === "func") {
       let id = "func_" + Date.now() + "_" + i;
-
-      output += `<a href="#" id="${id}" style="
-        display:inline;
-        width:auto;
-        color:${p.color || 'cyan'};
-        text-decoration:none;
-        border:none;
-        padding:0;
-        margin:0;
-        cursor:pointer;
-      ">${p.text}</a>`;
-
+      output += `<a href="#" id="${id}" style="display:inline; width:auto; color:${p.color || helpcolor}; text-decoration:none; border:none; padding:0; margin:0; cursor:pointer;">${p.text}</a>`;
       setTimeout(() => {
         let el = document.getElementById(id);
         if (el) {
@@ -1220,50 +1142,95 @@ function click(...parts) {
       }, 0);
     }
   });
-
-  gwc.output.append(output);
-  gwc.output.replace(output, output);
+  gwc.output.append("REPLACEMENT TEXT");
+  gwc.output.replace("REPLACEMENT TEXT", output);
 }
-//Store date
-  function storeCurrentDate() {
+// ============================================
+// DATA MANAGEMENT FUNCTIONS
+// ============================================
+
+//Remove tab
+function removeTab() {
+  $('#bottomsidebar .idTabs a[href="#character"]').parent().remove();
+  $('#character').remove();
+  $('a[href="#communication"]').click();
+}
+
+//Store current date in trax
+function getDate() {
     const today = new Date().toLocaleDateString("en-CA", { 
       timeZone: timezone, 
       year: "numeric", 
       month: "2-digit", 
       day: "2-digit" 
     });
-  gwc.userdata.trax.currentdate = today
-  }
-//Check if new day
-function isNewDay() {
-  const today = new Date().toLocaleDateString("en-CA", { 
-    timeZone: timezone, 
-    year: "numeric", 
-    month: "2-digit", 
-    day: "2-digit" 
-  });
-
-return gwc.userdata.trax.currentdate !== today;
-  
-}
-//Check number
-function ISN(value) {
-  const num = Number(value);
-
-  if (!Number.isInteger(num)) {
-    return false;
+return today
   }
 
-  return num;
+//Get date and time
+function getDateTime(timeZone = "UTC") {
+  const now = new Date();
+  return new Intl.DateTimeFormat("en-US", {timeZone: timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false
+    }).format(now);
+  }
+
+//Save date to storage
+function saveDate() {
+  const date = getDateTime(timezone);
+  localStorage.setItem("LastSaved", date);
 }
 
+//Save local storage
+function backupTrax() {
+  let trax = gwc.userdata.trax;
+  if (!trax) {
+    out("No trax userdata to back up!");
+  } else if (trax) {
+    localStorage.setItem("traxBackup", JSON.stringify(trax));
+    let saved = localStorage.getItem("traxBackup");
+    let parsed = JSON.parse(saved);
+    if (parsed && parsed.killz && parsed.coinloot) {
+      out("Data successfully backed up!");
+    }
+  }
+}
 
-===================================================================
+//Load local storage
+function loadTrax() {
+  let saved = localStorage.getItem("traxBackup");
+  if (!saved) {
+    out("No browser storage detected!", "red");
+  } else if (saved) {
+    let parsed = JSON.parse(saved);
+    if (parsed && parsed.killz && parsed.coinloot) {
+      gwc.userdata.trax = parsed;
+      out("Data restored from backup!");
+    }
+  }
+}
 
-Trigger 3: Trax tab
-*This only works on a computer, on mobile it doesn't show anything
+//Check local storage
+function checkTrax() {
+  let saved = localStorage.getItem("traxBackup");
+  if (!saved) {
+    out("No browser storage detected!");
+  } else if (saved) {
+    let parsed = JSON.parse(saved);
+    if (parsed && parsed.killz && parsed.coinloot) {
+      let savedDate = localStorage.getItem("LastSaved");
+      out("Data is detected in storage! Date of save: " + savedDate);
+    }
+  }
+}
 
-gmcp trigger: char.vitals
+####################################################################################################
+
+This is the trigger that displays a tab next to the communications window. It updates whenever genesis sends character health info, but you could put it in a setinterval loop if you want it to be more reliable. For how it is at base, <vitals> often works to refresh it. 
+Note: This bit only works on a computer, it doesn't show up at all on mobile
+
+Trigger: Trax tab
+
+gmcp pattern: char.vitals
 
 Execute Javascript:
 
@@ -1343,16 +1310,19 @@ function populateCharacterTab() {
   //====================
   // ACTIVITY
   //====================
+
+  //Boarding ship
   let boarding = ""
 if(us.boardingnext && us.boardingnext == true){
   boarding = nl + color("Boarding next ship!" , colors.info[0])
 }
+  //Rooms moved
   let walks = "";
   if (trax.walks) {
     walks = nl + color("Rooms moved: ", colors.info[0]) +
             color(formatNumber(trax.walks.alltime), colors.info[1]);
   }
-
+  //Show herbs found
   let herbingt = "";
   let herbinga = "";
   if(trax.herbs && trax.herbs.today != 0){
@@ -1363,6 +1333,16 @@ if(us.boardingnext && us.boardingnext == true){
     herbinga = nl + color("Herbs All Time: ", colors.success[0]) +
               color(formatNumber(trax.herbs.alltime), colors.success[1]);
   }
+  
+  //Show if you can eat an herb
+  let herbready = ""
+  if(trax.caneatherb == true){
+    herbready = nl + color("You can eat an herb", colors.success[1])
+  }
+  if(trax.caneatherb == false){
+    herbready = nl + color("You cannot eat an herb" , colors.combat[1])
+  }
+  
 //Herbing progress - to be used with Exosphere's Herb superscript
 let path = us.currentPath
 let herbing = ""
@@ -1377,8 +1357,17 @@ if (us.herbAliasName && us.herbscriptonoff == "on") { //must drop in the gwc.use
 }
 
 let progress = ""
-progress = (nl + color("All time progs: ",colors.special[0]) + color(trax.progress.levels, colors.special[1]) + nl+
-            color("All time fantastics: ",colors.special[0]) + color(trax.progress.fantas, colors.special[1]) 
+let todayprog = ""
+if (trax.progress.today == 0){
+  todayprog = nl + color("No progress made today" , colors.special[0])
+}
+else if(trax.progress.today !=0){
+  todayprog = nl + color("Progress levels today: ", colors.special[0]) + color(trax.progress.today, colors.special[1])
+}
+let fantaeq = toWhole(gwc.userdata.trax.progress.levels / 18)
+progress = (nl + color("All time progs: ",colors.special[0]) + color(trax.progress.levels + " = " + fantaeq + " fantas", colors.special[1]) + nl+
+            color("All time fantastics: ",colors.special[0]) + color(trax.progress.fantas, colors.special[1]) +
+            todayprog
             )
   //====================
   // COMBAT
@@ -1471,7 +1460,17 @@ if (us.huntAliasName /*checks for hunt script's storage*/ && us.huntonoff == "on
         colors.level[1]
       );
   }
+//===================
+// ABILITIES
+//===================
 
+  let strength = ""
+  if(trax.canstrength === false){
+   strength = nl + color("You cannot cast strength yet", colors.combat[1])
+  }
+  else if(trax.canstrength === true){
+   strength = nl + color("You can cast strength!" , colors.success[0]) 
+  }
   //====================
   // BUILD HTML
   //====================
@@ -1494,7 +1493,9 @@ if (us.huntAliasName /*checks for hunt script's storage*/ && us.huntonoff == "on
 
     color("-- Activity --", colors.activity[0]) +
     walks +
+    boarding +
     progress +
+    herbready +
     herbing +
     herbingt +
     herbinga +
@@ -1504,6 +1505,7 @@ if (us.huntAliasName /*checks for hunt script's storage*/ && us.huntonoff == "on
     color("-- Combat --", colors.combat[0]) +
     hunting +
     huntprog +
+    strength +
     akills +
     tkills +
 
@@ -1562,3 +1564,4 @@ function separator(color = "#affc9f") {
     letter-spacing:0px;
   ">─────────────────────────────────────</span>`;
 }
+
