@@ -1,65 +1,82 @@
-Description: A very nice colored tracker system for everything from coins and imbues looted to rooms moved and kills per day!
+Trax - Advanced Activity Tracker
 
-Contains: 3 triggers & 1 alias
+A comprehensive, color-coded tracking system for genesis MUD that monitors everything from loot and kills to movement and XP gain!
 
-Usage: A veritable superscript(nearly a thousand lines of code) which tracks herbs picked, kills, imbues looted, coins looted, whether you can use abilities and herbs, progress to your next mortal level, your rooms moved, and even the money in your bank account!
-       It takes a bit of a while to set up properly but once it's done, this is a very satisfying bit of code! 
-       You can see everything you do update live, or if you're playing on mobile, type <trax> to see it in the conventional way.
-       If you have coding experience, this should be fairly easy to set up with everything working, and if you don't have experience this is a good way to practice!! You don't actually have to code anything, just drop in my code to the right places.
+Features - 
 
-!!! Credit to Faery for the tab addition code and to Exosphere for the browser storage code !!!
+    Tracks: Herbs picked, monster kills, imbues looted, coins collected, rooms moved, bank balance, mortal level progress, ability cooldowns, and more
+    Live Updates: Real-time tracking with popup window or tab display or both if you're a madman!
+    Mobile Friendly: Type <trax all> for normal text window display on mobile devices, or use the popup window, as it should work on most phones too!
+    Persistent Storage: Local save/restore functionality - backs up userdata to keep from corruption
+    Customizable Colors: Multiple color presets or create your own
+    Easy installation and data management: functions to help you instate your data if you have other trackers!
 
-Note: The hunting and herbing progress trackers are made to be used with Exosphere's amazing superscripts! 
-      Trax works without them, but it's incorporated into the script to show progress and status on them. 
-      To track if your hunting/herbing scripts are enabled and their progress, drop in a simple line of code to the bit of the alias that enables it, and another into the trigger where it disables it! 
-      Same with the pausing feature in the hunting script. Here are all the things to put in:
+Components -
 
-gwc.userdata.trax.huntonoff = "on"; //put in as a new line in the enable part of the hunting script
-gwc.userdata.trax.huntonoff = "off";//put in the disable/ending part of the hunting script
-gwc.userdata.trax.huntpaused == true //put in the pause section of the hunting script
-gwc.userdata.trax.huntpaused == false //put in the resume section of the hunting script
-gwc.userdata.trax.herbonoff = "on" //put in the start new path of the herbing alias
-gwc.userdata.trax.herbonoff = "off" //put in the finish path section of the herbing trigger
-gwc.userdata.healing = "on" //put in your auto heal script if you have them
-gwc.userdata.healing = "on" //put in the end of your auto heal script
+    2 Triggers - One tracks room movement and one everything else!
 
-      Again, the script works completely fine without these, but they are automatically incorporated!
+    1 Alias - Main command & control center (trax)
 
-Here's a helpful list of time zones so you can easily change it to your time! If it's not here, just look it up on https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-Common time zones (replace the var = "America/Chicago" with one of these)
---- USA ---
-"America/New_York"    // Eastern Time (EST/EDT)
-"America/Chicago"     // Central Time (CST/CDT)
-"America/Denver"      // Mountain Time (MST/MDT)
-"America/Phoenix"     // Arizona (no DST)
-"America/Los_Angeles" // Pacific Time (PST/PDT)
-"America/Anchorage"   // Alaska Time
-"Pacific/Honolulu"    // Hawaii Time
---- Canada ---
-"America/Toronto"     // Eastern
-"America/Winnipeg"    // Central
-"America/Edmonton"    // Mountain
-"America/Vancouver"   // Pacific
---- Europe ---
-"Europe/London"       // UK (GMT/BST)
-"Europe/Paris"        // Central Europe
-"Europe/Berlin"
-"Europe/Madrid"
-"Europe/Rome"
---- Asia ---
-"Asia/Tokyo"          // Japan
-"Asia/Seoul"          // Korea
-"Asia/Shanghai"       // China
-"Asia/Kolkata"        // India
---- Australia ---
-"Australia/Sydney"
-"Australia/Melbourne"
-"Australia/Perth"
---- Other ---
-"UTC"                 // Coordinated Universal Time
+Quick Start -
+    Copy all triggers and the alias into your client(or install the package using the package manager)
+   
+    Type trax init to initialize data storage
+
+    Type trax help for all available commands
+
+    Note: Be sure you're putting everything in right, you need to be careful copy pasting everything, but no coding experience is needed—just copy and paste!
+
+Integration with Hunting/Herbing Scripts -
+
+Trax includes built-in support for Exosphere's hunting/herbing scripts. To enable progress tracking, drop these bits into the right part of both the triggers and aliases of the hunting and herbing script!:
+
+Hunting Script:
+
+gwc.userdata.trax.huntonoff = "on";   // Add to enable section
+gwc.userdata.trax.huntonoff = "off";  // Add to disable section
+gwc.userdata.trax.huntpaused = true;  // Add to pause section
+gwc.userdata.trax.huntpaused = false; // Add to resume section
+
+Herbing Script:
+
+gwc.userdata.trax.herbonoff = "on";   // Add to start new path
+gwc.userdata.trax.herbonoff = "off";  // Add to finish path section
+
+Auto-Heal Script:
+
+gwc.userdata.healing = "on";  // Add to enable and end sections
+
+The script works perfectly without these—they're optional enhancements!
+
+Time Zone Configuration -
+
+Set your timezone in the configuration section. Common examples:
+Region	         Timezone
+US East	 "America/New_York"
+US Central	 "America/Chicago"
+US Mountain	 "America/Denver"
+US Pacific	 "America/Los_Angeles"
+UK	        "Europe/London"
+Central Europe "Europe/Paris"
+Japan          "Asia/Tokyo"
+Australia	 "Australia/Sydney"
+
+Commands; all of these have trax at the beginning -
+Category	Commands
+Display	all, herbs, walks, kills, imbues, progress, hunt, coins, bank
+Window/Tab	window on/off, tab on/off, options
+Data	       init, add, set, check, save, restore, reset, delete, newday
+
+Type trax help for more usage info.
+
+Credits -
+
+    Faery: Tab summoning code
+
+    Exosphere: Browser storage code & superscripts
 
 
-
+ᵀʰᶦˢ ᶦˢ ⁿᵉᵃʳˡʸ ²⁰⁰⁰ ˡᶦⁿᵉˢ ᵒᶠ ᶜᵒᵈᵉ ᴵ ᵗʰᶦⁿᵏ ᴵ'ᵐ ᵗᵒᵒ ᵃᵘᵗᶦˢᵗᶦᶜ ˢᵒᵐᵉᵒⁿᵉ ˢᵉⁿᵈ ʰᵉˡᵖ
 ####################################################################################################
 
 Alias: trax
