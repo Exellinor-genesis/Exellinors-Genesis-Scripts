@@ -32,7 +32,7 @@ gmcp trigger: char.vitals
 
 Execute Javascript:
 
-let notifRepeat = 60 //Time between notifications(until acknowledged)
+let notifRepeat = 60 //Seconds between notifications(until acknowledged)
 // Current time
 let now = Date.now();
 
